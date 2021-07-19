@@ -1,0 +1,67 @@
+<workflow-app xmlns="uri:oozie:workflow:0.4" name="shell-wf">
+    <start to="shell-node"/>
+    <action name="shell-node">
+        <shell xmlns="uri:oozie:shell-action:0.2">
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+            <configuration>
+                <property>
+                    <name>mapred.job.queue.name</name>
+                    <value>${queueName}</value>
+                </property>
+            </configuration>
+            <exec>caseStudyBCG_Shell.sh</exec>
+            <file>${shell_script_loc}/caseStudyBCG_Shell.sh</file>
+            <capture-output/>
+        </shell>
+        <ok to="checkStatus"/>
+        <error to="fail"/>
+    </action>
+    <decision name="checkStatus">
+        <switch>
+            <case to="Success">
+                ${wf:actionData('shell-node')['status'] eq "Succeeded"}
+            </case>
+            <case to="Fail">
+                ${wf:actionData('shell-node')['status'] eq "Failed"}
+            </case>
+        </switch>
+    </decision>
+    <action name="Success">
+        <email xmlns="uri:oozie:email-action:0.1">
+            <to>${success_email}</to>
+            <subject>BCG Case Study Completed Successfully</subject>
+            <body>
+                Hi Team,
+                       
+                       The job processed successfully
+                       Regards,
+                       BCG
+            </body>
+        </email>
+    <ok to="end"/>
+    <error to="kill"/>
+    </action>
+    <action name="Fail">
+        <email xmlns="uri:oozie:email-action:0.1">
+            <to>${success_email}</to>
+            <subject>BCG Case Study Failed</subject>
+            <body>
+                Hi Team,
+                       
+                       The job failed may be because of one or more feeds are missing or may be spark job failed
+                       Workflow Name:${wf:name()}
+                       Workflow ID:${wf:id()}
+                       
+                       Regards,
+                       BCG
+            </body>
+        </email>
+    <ok to="end"/>
+    <error to="kill"/>
+    </action>
+    <kill name="kill">
+        <message>Action failed, error message[${wf:errorMessage(wf:lastErrorNode())}]</message>
+    </kill>
+    <end name="end"/>
+</workflow-app>
